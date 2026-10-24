@@ -164,9 +164,14 @@ def replace(domain, records, selector, desired, dry_run, label):
     """
     existing = [r for r in records if selector(r)]
 
-    wanted = {(fqdn(domain, s), t, c.rstrip("."), p) for s, t, c, p in desired}
+    # Porkbun stores a missing priority as 0 and returns it as the string "0"
+    # (or null), so compare on that form or TXT records never count as present.
+    def norm_prio(p):
+        return "0" if p in (None, "") else str(p)
+
+    wanted = {(fqdn(domain, s), t, c.rstrip("."), norm_prio(p)) for s, t, c, p in desired}
     present = {
-        (r["name"], r["type"], r["content"].rstrip("."), r.get("prio") or None)
+        (r["name"], r["type"], r["content"].rstrip("."), norm_prio(r.get("prio")))
         for r in existing
     }
 
